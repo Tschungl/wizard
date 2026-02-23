@@ -570,3 +570,56 @@ async def test_s02_skip_goes_to_cloud_ip():
             assert type(pilot.app.screen).__name__ == "CloudIPScreen", (
                 f"Expected CloudIPScreen after skip, got {type(pilot.app.screen).__name__}"
             )
+
+
+@pytest.mark.asyncio
+async def test_s03_back_works_after_confirm():
+    """After confirming in s03, pressing Back should return to s02."""
+    from app import AsimilyWizard
+
+    all_p = _all_patches()
+    with all_p[0]:
+     with all_p[1]:
+      with all_p[2]:
+       with all_p[3]:
+        with all_p[4]:
+         with all_p[5]:
+          with all_p[6]:
+
+            app = AsimilyWizard()
+            async with app.run_test(headless=True, size=(120, 40)) as pilot:
+                await pilot.pause(0.3)
+
+                # s01 → s02
+                await pilot.click("#btn_next")
+                await pilot.pause(0.3)
+                pilot.app.screen.query_one("#sel_iface", Select).value = "eno1"
+                if not pilot.app.screen.query_one("#chk_dhcp", Checkbox).value:
+                    await pilot.click("#chk_dhcp")
+                await pilot.pause(0.1)
+                await pilot.click("#btn_next")
+                await pilot.pause(0.5)
+
+                # s03: wait for confirm button, click it
+                for _ in range(20):
+                    btn = pilot.app.screen.query_one("#btn_confirm", Button)
+                    if not btn.disabled:
+                        break
+                    await pilot.pause(0.1)
+                await pilot.click("#btn_confirm")
+                await pilot.pause(2.0)   # advance() sleeps 1.5s → s04
+
+                assert type(pilot.app.screen).__name__ == "CloudIPScreen"
+
+                # Back from s04 → s03 (confirmed state)
+                await pilot.click("#btn_back")
+                await pilot.pause(0.3)
+                assert type(pilot.app.screen).__name__ == "NetworkApplyScreen"
+
+                # Back from s03 confirmed → should go to s02
+                await pilot.press("escape")
+                await pilot.pause(0.3)
+                assert type(pilot.app.screen).__name__ == "NetworkConfigScreen", (
+                    f"Expected NetworkConfigScreen after Back on confirmed s03, "
+                    f"got {type(pilot.app.screen).__name__}"
+                )

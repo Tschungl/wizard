@@ -7,6 +7,8 @@ from logger import log
 class AsimilyWizard(App):
     """Asimily First Time Setup Wizard."""
 
+    BINDINGS = [("q", "quit", "Quit Wizard")]
+
     CSS = """
     Screen {
         background: $surface;
