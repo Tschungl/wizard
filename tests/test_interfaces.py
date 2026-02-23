@@ -1,6 +1,6 @@
 # tests/test_interfaces.py
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from network.interfaces import InterfaceInfo, list_interfaces, get_interface_info
 
 def test_interface_info_fields():
@@ -58,3 +58,28 @@ def test_list_interfaces_excludes_loopback():
     assert "lo" not in names
     assert "eth0" in names
     assert "eth1" in names
+
+
+@pytest.mark.asyncio
+async def test_async_iface_status_returns_tuple(monkeypatch):
+    """async_iface_status returns (operstate, ips) tuple."""
+    import network.interfaces as imod
+    monkeypatch.setattr(
+        imod, "async_iface_status",
+        AsyncMock(return_value=("up", ["192.168.1.10/24"]))
+    )
+    state, ips = await imod.async_iface_status("eth0")
+    assert state == "up"
+    assert "192.168.1.10/24" in ips
+
+@pytest.mark.asyncio
+async def test_async_iface_status_unknown_interface(monkeypatch):
+    """Returns ('unknown', []) for non-existent interface."""
+    import network.interfaces as imod
+    monkeypatch.setattr(
+        imod, "async_iface_status",
+        AsyncMock(return_value=("unknown", []))
+    )
+    state, ips = await imod.async_iface_status("nonexistent99")
+    assert state == "unknown"
+    assert ips == []

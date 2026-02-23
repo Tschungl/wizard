@@ -119,3 +119,41 @@ def list_interfaces(exclude_lo: bool = True) -> List[InterfaceInfo]:
             continue
         result.append(get_interface_info(name))
     return result
+
+
+async def async_iface_status(iface: str) -> tuple[str, list[str]]:
+    """
+    Return (operstate, [ip/prefix, ...]) for `iface` without blocking.
+    Reads operstate from sysfs; parses IPs from `ip -4 addr show dev <iface>`.
+    Returns ("unknown", []) if the interface does not exist.
+    """
+    import asyncio
+    from pathlib import Path
+
+    # operstate
+    operstate_path = Path(f"/sys/class/net/{iface}/operstate")
+    try:
+        operstate = operstate_path.read_text().strip()
+    except OSError:
+        return "unknown", []
+
+    # IP addresses via `ip -4 addr show dev <iface>`
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ip", "-4", "addr", "show", "dev", iface,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await proc.communicate()
+    except OSError:
+        return operstate, []
+
+    ips: list[str] = []
+    for line in stdout.decode().splitlines():
+        line = line.strip()
+        if line.startswith("inet "):
+            parts = line.split()
+            if len(parts) >= 2:
+                ips.append(parts[1])   # e.g. "192.168.1.100/24"
+
+    return operstate, ips
