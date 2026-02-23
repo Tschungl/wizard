@@ -34,7 +34,7 @@ class NetplanManager:
             log.info(f"Removed wizard netplan config {wizard}")
         for bak in self.netplan_dir.glob("*.bak"):
             original = bak.with_suffix("")   # strips .bak -> .yaml
-            shutil.copy2(bak, original)
+            bak.rename(original)
             log.info(f"Restored {bak} -> {original}")
 
     # -- Write -------------------------------------------------------------

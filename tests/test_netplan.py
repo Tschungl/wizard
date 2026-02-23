@@ -54,6 +54,7 @@ def test_restore_removes_wizard_file(tmp_netplan, tmp_path):
     tmp_netplan.restore()
     assert not wizard_file.exists()
     assert (tmp_path / "50-cloud-init.yaml").exists()
+    assert not (tmp_path / "50-cloud-init.yaml.bak").exists()
 
 def test_restore_is_idempotent_without_wizard_file(tmp_netplan, tmp_path):
     """restore() must not crash if wizard file does not exist."""
