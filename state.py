@@ -17,7 +17,7 @@ class WizardState:
     proxy_host: str = ""
     proxy_port: int = 0
     proxy_user: str = ""
-    proxy_password: str = ""
+    proxy_password: str = field(default="", repr=False)
 
     # Step 4
     cloud_ip: Optional[str] = None   # None = skipped

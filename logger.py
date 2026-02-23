@@ -25,8 +25,9 @@ def setup_logger() -> logging.Logger:
     sh.setLevel(logging.WARNING)
     sh.setFormatter(fmt)
 
-    logger.addHandler(fh)
-    logger.addHandler(sh)
+    if not logger.handlers:
+        logger.addHandler(fh)
+        logger.addHandler(sh)
     return logger
 
 log = setup_logger()
