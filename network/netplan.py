@@ -198,10 +198,14 @@ class NetplanManager:
                     ["ip", "link", "set", iface, "promisc", "on"],
                     check=True, capture_output=True
                 )
+                log.info("Set %s promisc on", iface)
+            except subprocess.CalledProcessError as e:
+                log.warning("ip link set %s promisc on failed: %s", iface, e)
+            try:
                 subprocess.run(
                     ["ip", "link", "set", iface, "up"],
                     check=True, capture_output=True
                 )
-                log.info("Set %s promisc+up", iface)
+                log.info("Set %s up", iface)
             except subprocess.CalledProcessError as e:
-                log.warning("ip link set %s failed: %s", iface, e)
+                log.warning("ip link set %s up failed: %s", iface, e)
