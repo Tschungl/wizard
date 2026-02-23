@@ -54,12 +54,20 @@ class NetworkConfigScreen(Screen):
             yield Static("", id="err_msg")
         with Horizontal(id="nav_buttons"):
             yield Button("← Back", id="btn_back", variant="default")
+            yield Button("Skip (keep current settings) →", id="btn_skip", variant="default")
             yield Button("Apply →", id="btn_next", variant="primary")
         yield Footer()
 
     def on_mount(self) -> None:
         # Hide proxy fields initially
         self.query_one("#proxy_fields").display = False
+
+    def on_screen_resume(self) -> None:
+        """Refresh the interface Select whenever s02 becomes active again."""
+        ifaces = list_interfaces()
+        new_options = [(i.display_str(), i.name) for i in ifaces]
+        self.query_one("#sel_iface", Select).set_options(new_options)
+        log.info("Step 2 resume: refreshed %d interfaces in Select", len(ifaces))
 
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
         if event.checkbox.id == "chk_dhcp":
@@ -152,6 +160,10 @@ class NetworkConfigScreen(Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn_back":
             self.app.pop_screen()
+        elif event.button.id == "btn_skip":
+            log.info("Step 2: skipped by user – keeping existing network config")
+            from screens.s04_cloud_ip import CloudIPScreen
+            self.app.push_screen(CloudIPScreen())
         elif event.button.id == "btn_next":
             if self._collect_and_validate():
                 from screens.s03_network_apply import NetworkApplyScreen

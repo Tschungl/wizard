@@ -40,6 +40,23 @@ class WelcomeScreen(Screen):
                 ips,
             )
 
+    def on_screen_resume(self) -> None:
+        """Refresh the interface table each time s01 becomes active again."""
+        table = self.query_one("#iface_table", DataTable)
+        table.clear()
+        ifaces = list_interfaces()
+        log.info("Step 1 resume: refreshing %d interfaces", len(ifaces))
+        for iface in ifaces:
+            ips = ", ".join(iface.ip_addresses) or "—"
+            table.add_row(
+                iface.name,
+                iface.port_type,
+                iface.speed_label,
+                iface.operstate.upper(),
+                iface.mac or "—",
+                ips,
+            )
+
     def action_next_step(self) -> None:
         from screens.s02_network_config import NetworkConfigScreen
         self.app.push_screen(NetworkConfigScreen())

@@ -436,3 +436,77 @@ async def test_s02_proxy_label_mentions_https():
             assert "https" in label_text, (
                 "Proxy checkbox must mention HTTPS"
             )
+
+
+@pytest.mark.asyncio
+async def test_s02_select_refreshes_on_resume():
+    """
+    When returning to s02 (screen resume), list_interfaces() is called
+    again and the Select options are updated.
+    """
+    from app import AsimilyWizard
+    from textual.widgets import Select
+
+    SECOND_CALL_IFACES = [
+        InterfaceInfo(
+            name="eno1",
+            operstate="up",
+            link_speed_mbps=1000,
+            port_type="RJ45",
+            mac="00:11:22:33:44:55",
+            ip_addresses=["10.0.0.5/24"],   # different IP
+        ),
+    ]
+
+    call_count = {"n": 0}
+
+    def mock_list(exclude_lo=True):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return FAKE_IFACES
+        return SECOND_CALL_IFACES
+
+    with patch("network.interfaces.list_interfaces", side_effect=mock_list), \
+         patch("screens.s01_welcome.list_interfaces", side_effect=mock_list), \
+         patch("screens.s02_network_config.list_interfaces", side_effect=mock_list):
+        app = AsimilyWizard()
+        async with app.run_test(headless=True, size=(120, 40)) as pilot:
+            await pilot.pause(0.3)
+            await pilot.click("#btn_next")   # s01 → s02 (1st list_interfaces call)
+            await pilot.pause(0.3)
+
+            # Go back to s01 (pops s02 entirely)
+            await pilot.click("#btn_back")
+            await pilot.pause(0.3)
+
+            # Go to s02 again (NEW instance, 2nd list_interfaces call)
+            await pilot.click("#btn_next")
+            await pilot.pause(0.3)
+
+            sel = pilot.app.screen.query_one("#sel_iface", Select)
+            # The new instance will have been created with SECOND_CALL_IFACES
+            options_text = " ".join(str(opt) for opt in sel._options)
+            assert "10.0.0.5" in options_text, (
+                "Select should show refreshed IP (10.0.0.5) from second call"
+            )
+
+
+@pytest.mark.asyncio
+async def test_s02_skip_goes_to_cloud_ip():
+    """Skip button on s02 should push CloudIPScreen directly (skip s03)."""
+    from app import AsimilyWizard
+
+    with patch("network.interfaces.list_interfaces", return_value=FAKE_IFACES):
+        app = AsimilyWizard()
+        async with app.run_test(headless=True, size=(120, 40)) as pilot:
+            await pilot.pause(0.3)
+            await pilot.click("#btn_next")   # s01 → s02
+            await pilot.pause(0.3)
+
+            assert type(pilot.app.screen).__name__ == "NetworkConfigScreen"
+            await pilot.click("#btn_skip")
+            await pilot.pause(0.3)
+
+            assert type(pilot.app.screen).__name__ == "CloudIPScreen", (
+                f"Expected CloudIPScreen after skip, got {type(pilot.app.screen).__name__}"
+            )
