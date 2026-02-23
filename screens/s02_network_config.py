@@ -7,7 +7,7 @@ from textual.widgets import (
     Input, Checkbox, Label
 )
 from widgets.asimily_header import AsimilyHeader
-from textual.containers import Vertical, Horizontal
+from textual.containers import Vertical, Horizontal, VerticalScroll
 from network.interfaces import list_interfaces
 from validators import validate_ip, validate_prefix, validate_gateway_in_subnet, validate_dns
 from logger import log
@@ -25,7 +25,7 @@ class NetworkConfigScreen(Screen):
         iface_options = [(i.display_str(), i.name) for i in ifaces]
 
         yield AsimilyHeader()
-        with Vertical(id="form"):
+        with VerticalScroll(id="form"):
             yield Static("Step 2: Management Port Configuration", classes="title")
             yield Label("Select Management Interface:")
             yield Select(options=iface_options, id="sel_iface", prompt="Choose interface…")
@@ -41,15 +41,15 @@ class NetworkConfigScreen(Screen):
             yield Input(placeholder="8.8.8.8, 8.8.4.4", id="inp_dns")
             yield Label("NTP Servers (comma-separated):")
             yield Input(placeholder="pool.ntp.org", id="inp_ntp")
-            yield Checkbox("Use HTTP Proxy", id="chk_proxy", value=False)
+            yield Checkbox("Use HTTP & HTTPS Proxy", id="chk_proxy", value=False)
             with Vertical(id="proxy_fields"):
                 yield Label("Proxy Host / IP:")
                 yield Input(id="inp_proxy_host")
                 yield Label("Proxy Port:")
                 yield Input(id="inp_proxy_port")
-                yield Label("Proxy Username (optional):")
+                yield Label("Proxy Username:")
                 yield Input(id="inp_proxy_user")
-                yield Label("Proxy Password (optional):")
+                yield Label("Proxy Password:")
                 yield Input(id="inp_proxy_pass", password=True)
             yield Static("", id="err_msg")
         with Horizontal(id="nav_buttons"):

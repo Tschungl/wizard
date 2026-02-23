@@ -397,3 +397,43 @@ async def test_s06_no_selection_goes_to_s07():
                     assert "eno1" in str(summary._Static__content), (
                         "Summary should mention the management interface 'eno1'"
                     )
+
+
+@pytest.mark.asyncio
+async def test_s02_form_is_scrollable():
+    """The s02 form container must be a VerticalScroll widget."""
+    from app import AsimilyWizard
+    from textual.containers import VerticalScroll
+
+    with patch("network.interfaces.list_interfaces", return_value=FAKE_IFACES):
+        app = AsimilyWizard()
+        async with app.run_test(headless=True, size=(120, 40)) as pilot:
+            await pilot.pause(0.3)
+            await pilot.click("#btn_next")   # s01 → s02
+            await pilot.pause(0.3)
+
+            form = pilot.app.screen.query_one("#form")
+            assert isinstance(form, VerticalScroll), (
+                f"#form must be VerticalScroll, got {type(form).__name__}"
+            )
+
+
+@pytest.mark.asyncio
+async def test_s02_proxy_label_mentions_https():
+    """The proxy checkbox label must mention both HTTP and HTTPS."""
+    from app import AsimilyWizard
+    from textual.widgets import Checkbox
+
+    with patch("network.interfaces.list_interfaces", return_value=FAKE_IFACES):
+        app = AsimilyWizard()
+        async with app.run_test(headless=True, size=(120, 40)) as pilot:
+            await pilot.pause(0.3)
+            await pilot.click("#btn_next")
+            await pilot.pause(0.3)
+
+            chk = pilot.app.screen.query_one("#chk_proxy", Checkbox)
+            # Textual stores checkbox label in _label attribute
+            label_text = str(chk._label).lower()
+            assert "https" in label_text, (
+                "Proxy checkbox must mention HTTPS"
+            )
