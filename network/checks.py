@@ -76,7 +76,7 @@ async def check_icmp(host: str, *, label: str, timeout: float = 5.0) -> CheckRes
 async def resolve_host(hostname: str) -> Optional[str]:
     """Return first resolved IPv4, or None on failure."""
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         infos = await loop.getaddrinfo(
             hostname, None,
             family=socket.AF_INET,
