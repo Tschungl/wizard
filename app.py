@@ -67,6 +67,12 @@ class AsimilyWizard(App):
     ProgressBar {
         margin: 1 0;
     }
+    AsimilyHeader {
+        color: #22c55e;
+        text-style: bold;
+        width: 100%;
+        padding: 0 2;
+    }
     """
 
     def __init__(self) -> None:
