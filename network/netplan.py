@@ -9,6 +9,9 @@ from typing import Optional, List
 from logger import log
 
 WIZARD_FILENAME = "60-asimily-wizard.yaml"
+NTP_CONF_DIR = Path("/etc/systemd/timesyncd.conf.d")
+NTP_CONF_FILENAME = "wizard.conf"
+ENV_FILE = Path("/etc/environment")
 
 
 class NetplanManager:
@@ -115,3 +118,50 @@ class NetplanManager:
             log.info("netplan try confirmed by user")
         except OSError as e:
             log.error(f"Failed to confirm netplan try: {e}")
+
+    # -- NTP / Proxy -----------------------------------------------------------
+
+    def apply_ntp(self, ntp_servers: List[str]) -> None:
+        """Write NTP servers to a systemd-timesyncd drop-in config file."""
+        if not ntp_servers:
+            return
+        NTP_CONF_DIR.mkdir(parents=True, exist_ok=True)
+        conf_path = NTP_CONF_DIR / NTP_CONF_FILENAME
+        content = f"[Time]\nNTP={' '.join(ntp_servers)}\n"
+        conf_path.write_text(content)
+        os.chmod(conf_path, 0o644)
+        log.info("Wrote NTP config to %s", conf_path)
+
+    def apply_proxy(
+        self,
+        host: str,
+        port: int,
+        user: str = "",
+        password: str = "",
+    ) -> None:
+        """Write http_proxy / https_proxy entries to /etc/environment."""
+        if user and password:
+            url = f"http://{user}:{password}@{host}:{port}/"
+        else:
+            url = f"http://{host}:{port}/"
+        # Preserve unrelated lines from any existing file
+        lines: List[str] = []
+        _proxy_keys = (
+            "http_proxy=", "HTTP_PROXY=",
+            "https_proxy=", "HTTPS_PROXY=",
+            "no_proxy=", "NO_PROXY=",
+        )
+        if ENV_FILE.exists():
+            for line in ENV_FILE.read_text().splitlines():
+                if not any(line.startswith(k) for k in _proxy_keys):
+                    lines.append(line)
+        lines += [
+            f"http_proxy={url}",
+            f"HTTP_PROXY={url}",
+            f"https_proxy={url}",
+            f"HTTPS_PROXY={url}",
+            "no_proxy=localhost,127.0.0.1",
+            "NO_PROXY=localhost,127.0.0.1",
+        ]
+        ENV_FILE.write_text("\n".join(lines) + "\n")
+        log.info("Wrote proxy config to %s", ENV_FILE)

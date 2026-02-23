@@ -7,6 +7,7 @@ from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Button, Static
 from textual.containers import Vertical
+from network.netplan import NetplanManager
 from logger import log
 
 INSTALL_SCRIPT = "/opt/asimily/install.sh"
@@ -91,6 +92,24 @@ class FinishScreen(Screen):
             status.update(f"[red]Failed to write config: {e}[/red]")
             self.query_one("#btn_install").disabled = False
             return
+
+        # Apply NTP and proxy settings now that config is confirmed
+        nm = NetplanManager()
+        if state.ntp_servers:
+            try:
+                nm.apply_ntp(state.ntp_servers)
+            except OSError as e:
+                log.warning("Failed to write NTP config: %s", e)
+        if state.proxy_enabled and state.proxy_host:
+            try:
+                nm.apply_proxy(
+                    state.proxy_host,
+                    state.proxy_port,
+                    state.proxy_user,
+                    state.proxy_password,
+                )
+            except OSError as e:
+                log.warning("Failed to write proxy config: %s", e)
 
         # Check install script exists
         install = Path(INSTALL_SCRIPT)

@@ -101,8 +101,11 @@ class NetworkApplyScreen(Screen):
             status.update(
                 "[yellow]Timeout – rolling back to previous configuration.[/yellow]"
             )
+            loop = asyncio.get_running_loop()
             try:
-                self._proc.wait(timeout=5)
+                await loop.run_in_executor(
+                    None, lambda: self._proc.wait(timeout=5)
+                )
             except Exception:
                 pass
             self.query_one("#btn_back").disabled = False

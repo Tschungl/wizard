@@ -1,5 +1,6 @@
 # tests/test_netplan.py
 import pytest
+import network.netplan as netplan_mod
 from pathlib import Path
 from network.netplan import NetplanManager
 
@@ -69,3 +70,56 @@ def test_written_yaml_has_correct_permissions(tmp_netplan, tmp_path):
     import stat
     mode = stat.S_IMODE(yaml_file.stat().st_mode)
     assert mode == 0o600
+
+
+def test_apply_ntp_writes_config(tmp_netplan, tmp_path, monkeypatch):
+    """apply_ntp() writes a systemd-timesyncd drop-in file."""
+    ntp_dir = tmp_path / "timesyncd.conf.d"
+    monkeypatch.setattr(netplan_mod, "NTP_CONF_DIR", ntp_dir)
+    tmp_netplan.apply_ntp(["pool.ntp.org", "time.google.com"])
+    conf = ntp_dir / "wizard.conf"
+    assert conf.exists()
+    content = conf.read_text()
+    assert "[Time]" in content
+    assert "pool.ntp.org" in content
+    assert "time.google.com" in content
+
+
+def test_apply_ntp_skips_empty_list(tmp_netplan, tmp_path, monkeypatch):
+    """apply_ntp() with empty list must not create any file."""
+    ntp_dir = tmp_path / "timesyncd.conf.d"
+    monkeypatch.setattr(netplan_mod, "NTP_CONF_DIR", ntp_dir)
+    tmp_netplan.apply_ntp([])
+    assert not ntp_dir.exists()
+
+
+def test_apply_proxy_writes_environment(tmp_netplan, tmp_path, monkeypatch):
+    """apply_proxy() writes proxy entries to /etc/environment."""
+    env_file = tmp_path / "environment"
+    monkeypatch.setattr(netplan_mod, "ENV_FILE", env_file)
+    tmp_netplan.apply_proxy("proxy.example.com", 3128)
+    content = env_file.read_text()
+    assert "http_proxy=http://proxy.example.com:3128/" in content
+    assert "https_proxy=http://proxy.example.com:3128/" in content
+    assert "no_proxy=localhost,127.0.0.1" in content
+
+
+def test_apply_proxy_with_credentials(tmp_netplan, tmp_path, monkeypatch):
+    """apply_proxy() includes credentials in the URL when provided."""
+    env_file = tmp_path / "environment"
+    monkeypatch.setattr(netplan_mod, "ENV_FILE", env_file)
+    tmp_netplan.apply_proxy("proxy.example.com", 3128, "alice", "s3cr3t")
+    content = env_file.read_text()
+    assert "http_proxy=http://alice:s3cr3t@proxy.example.com:3128/" in content
+
+
+def test_apply_proxy_preserves_existing_lines(tmp_netplan, tmp_path, monkeypatch):
+    """apply_proxy() keeps unrelated lines already in /etc/environment."""
+    env_file = tmp_path / "environment"
+    env_file.write_text("LANG=en_US.UTF-8\nTZ=UTC\n")
+    monkeypatch.setattr(netplan_mod, "ENV_FILE", env_file)
+    tmp_netplan.apply_proxy("proxy.example.com", 3128)
+    content = env_file.read_text()
+    assert "LANG=en_US.UTF-8" in content
+    assert "TZ=UTC" in content
+    assert "http_proxy=" in content
