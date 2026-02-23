@@ -7,14 +7,6 @@ from textual.containers import Container, Vertical
 from network.interfaces import list_interfaces
 from logger import log
 
-BANNER = """\
-  ___    ___  ___ __  __ ___ _  __   __
- / __|  / __||_ _||  \/  ||_ _|| |\ \ / /
- \___ \ \__ \ | | | |\/| | | | | |__\ V /
- |___/ |___/|___||_|  |_||___||____| |_|
-          First Time Setup Wizard
-"""
-
 class WelcomeScreen(Screen):
     """Step 1: Welcome screen showing all network interfaces."""
 
@@ -23,7 +15,6 @@ class WelcomeScreen(Screen):
     def compose(self) -> ComposeResult:
         yield AsimilyHeader()
         with Vertical(id="content"):
-            yield Static(BANNER, id="banner")
             yield Static("Detected Network Interfaces", classes="title")
             yield DataTable(id="iface_table")
             yield Static(
