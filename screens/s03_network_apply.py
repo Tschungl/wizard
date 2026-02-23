@@ -45,7 +45,7 @@ class NetworkApplyScreen(Screen):
                          disabled=True)
         yield Footer()
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         asyncio.create_task(self._apply_and_countdown())
 
     async def _apply_and_countdown(self) -> None:
@@ -128,6 +128,7 @@ class NetworkApplyScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn_confirm":
-            self._do_confirm()
+            if not self._confirmed and self._proc:
+                self._do_confirm()
         elif event.button.id == "btn_back":
             self.app.pop_screen()

@@ -132,12 +132,17 @@ class NetworkConfigScreen(Screen):
             state.proxy_user = self.query_one("#inp_proxy_user", Input).value.strip()
             state.proxy_password = self.query_one("#inp_proxy_pass", Input).value
 
-        log.info(
-            "Step 2: config – iface=%s dhcp=%s ip=%s/%s gw=%s dns=%s",
-            state.mgmt_interface, state.use_dhcp,
-            state.ip_address, state.prefix_len,
-            state.gateway, state.dns_servers,
-        )
+        if state.use_dhcp:
+            log.info(
+                "Step 2: config – iface=%s dhcp=True dns=%s",
+                state.mgmt_interface, state.dns_servers,
+            )
+        else:
+            log.info(
+                "Step 2: config – iface=%s dhcp=False ip=%s/%s gw=%s dns=%s",
+                state.mgmt_interface, state.ip_address,
+                state.prefix_len, state.gateway, state.dns_servers,
+            )
         return True
 
     def _show_error(self, msg: str) -> None:
