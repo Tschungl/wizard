@@ -6,6 +6,7 @@ from widgets.asimily_header import AsimilyHeader
 from textual.widgets.selection_list import Selection
 from textual.containers import Vertical, Horizontal
 from network.interfaces import list_interfaces
+from network.netplan import NetplanManager
 from logger import log
 
 
@@ -63,5 +64,17 @@ class MirrorPortsScreen(Screen):
                 selected = []
             self.app.state.mirror_interfaces = selected
             log.info("Step 6: mirror interfaces = %s", selected)
+
+            if selected:
+                nm = NetplanManager()
+                try:
+                    nm.write_mirror_ports(selected)
+                except OSError as e:
+                    log.warning("Failed to write mirror ports YAML: %s", e)
+                try:
+                    nm.configure_mirror_promisc(selected)
+                except Exception as e:
+                    log.warning("Failed to set promisc mode: %s", e)
+
             from screens.s07_finish import FinishScreen
             self.app.push_screen(FinishScreen())

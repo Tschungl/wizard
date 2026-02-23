@@ -12,6 +12,7 @@ WIZARD_FILENAME = "60-asimily-wizard.yaml"
 NTP_CONF_DIR = Path("/etc/systemd/timesyncd.conf.d")
 NTP_CONF_FILENAME = "wizard.conf"
 ENV_FILE = Path("/etc/environment")
+MIRROR_FILENAME = "61-asimily-mirror.yaml"
 
 
 class NetplanManager:
@@ -165,3 +166,42 @@ class NetplanManager:
         ]
         ENV_FILE.write_text("\n".join(lines) + "\n")
         log.info("Wrote proxy config to %s", ENV_FILE)
+
+    # -- Mirror ports -----------------------------------------------------------
+
+    def write_mirror_ports(self, ifaces: List[str]) -> None:
+        """Write a netplan YAML that sets mirror interfaces to promiscuous/no-IP."""
+        if not ifaces:
+            return
+        ethernets = {
+            iface: {"dhcp4": False, "link": {"promiscuous": True}}
+            for iface in ifaces
+        }
+        config = {
+            "network": {
+                "version": 2,
+                "renderer": "networkd",
+                "ethernets": ethernets,
+            }
+        }
+        path = self.netplan_dir / MIRROR_FILENAME
+        with open(path, "w") as f:
+            yaml.dump(config, f, default_flow_style=False)
+        os.chmod(path, 0o600)
+        log.info("Wrote mirror ports config to %s", path)
+
+    def configure_mirror_promisc(self, ifaces: List[str]) -> None:
+        """Immediately bring up each interface in promiscuous mode via ip link."""
+        for iface in ifaces:
+            try:
+                subprocess.run(
+                    ["ip", "link", "set", iface, "promisc", "on"],
+                    check=True, capture_output=True
+                )
+                subprocess.run(
+                    ["ip", "link", "set", iface, "up"],
+                    check=True, capture_output=True
+                )
+                log.info("Set %s promisc+up", iface)
+            except subprocess.CalledProcessError as e:
+                log.warning("ip link set %s failed: %s", iface, e)

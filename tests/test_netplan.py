@@ -3,6 +3,7 @@ import pytest
 import network.netplan as netplan_mod
 from pathlib import Path
 from network.netplan import NetplanManager
+from unittest.mock import MagicMock
 
 @pytest.fixture
 def tmp_netplan(tmp_path):
@@ -123,3 +124,39 @@ def test_apply_proxy_preserves_existing_lines(tmp_netplan, tmp_path, monkeypatch
     assert "LANG=en_US.UTF-8" in content
     assert "TZ=UTC" in content
     assert "http_proxy=" in content
+
+
+def test_write_mirror_ports_creates_yaml(tmp_netplan, tmp_path):
+    """write_mirror_ports() creates YAML with dhcp4=false and promiscuous for each iface."""
+    import yaml
+    tmp_netplan.write_mirror_ports(["eth1", "eth2"])
+    mirror_file = tmp_path / "61-asimily-mirror.yaml"
+    assert mirror_file.exists()
+    data = yaml.safe_load(mirror_file.read_text())
+    ethernets = data["network"]["ethernets"]
+    assert "eth1" in ethernets
+    assert "eth2" in ethernets
+    assert ethernets["eth1"]["dhcp4"] is False
+    assert ethernets["eth1"]["link"]["promiscuous"] is True
+
+
+def test_write_mirror_ports_empty_list_no_file(tmp_netplan, tmp_path):
+    """write_mirror_ports() with empty list must not write any file."""
+    tmp_netplan.write_mirror_ports([])
+    mirror_file = tmp_path / "61-asimily-mirror.yaml"
+    assert not mirror_file.exists()
+
+
+def test_configure_mirror_promisc_calls_ip_link(tmp_netplan, monkeypatch):
+    """configure_mirror_promisc() issues ip link promisc + up for each interface."""
+    import network.netplan as nm_mod
+    calls = []
+    def fake_run(cmd, **kw):
+        calls.append(cmd)
+        return MagicMock(returncode=0)
+    monkeypatch.setattr(nm_mod.subprocess, "run", fake_run)
+    tmp_netplan.configure_mirror_promisc(["eth1", "eth2"])
+    flat = [" ".join(c) for c in calls]
+    assert any("eth1" in c and "promisc" in c for c in flat)
+    assert any("eth1" in c and "up" in c for c in flat)
+    assert any("eth2" in c and "promisc" in c for c in flat)
