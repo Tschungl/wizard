@@ -65,7 +65,7 @@ def _get_port_type(iface: str) -> str:
                     return "SFP"
                 if "tp" in port or "twisted" in port:
                     return "RJ45"
-                if "da" in port:
+                if port in ("da", "direct attach"):
                     return "DAC"
     except Exception as e:
         log.debug(f"ethtool failed for {iface}: {e}")

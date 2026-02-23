@@ -42,6 +42,8 @@ def test_display_str_contains_key_fields():
     assert "SFP+" in s
     assert "10 Gbit" in s
     assert "UP" in s.upper()
+    assert "aa:bb:cc:dd:ee:ff" in s
+    assert "10.0.0.1/24" in s
 
 def test_list_interfaces_excludes_loopback():
     """list_interfaces with exclude_lo=True should not return 'lo'."""
