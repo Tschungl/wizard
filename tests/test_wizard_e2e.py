@@ -439,7 +439,7 @@ async def test_s02_proxy_label_mentions_https():
 
 
 @pytest.mark.asyncio
-async def test_s02_select_refreshes_on_resume():
+async def test_s02_compose_uses_fresh_interface_data():
     """
     When returning to s02 (screen resume), list_interfaces() is called
     again and the Select options are updated.
@@ -489,6 +489,66 @@ async def test_s02_select_refreshes_on_resume():
             assert "10.0.0.5" in options_text, (
                 "Select should show refreshed IP (10.0.0.5) from second call"
             )
+
+
+@pytest.mark.asyncio
+async def test_s02_select_preserves_selection_on_resume():
+    """
+    When s02 is suspended (s03 pushed on top) then resumed (s03 popped),
+    on_screen_resume() should refresh the options but preserve the user's
+    previously selected interface.
+    """
+    from app import AsimilyWizard
+    from textual.widgets import Select
+
+    all_p = _all_patches()
+    with all_p[0]:   # list_interfaces
+     with all_p[1]:  # async_iface_status
+      with all_p[2]:  # backup
+       with all_p[3]:  # write_static
+        with all_p[4]:  # write_dhcp
+         with all_p[5]:  # apply_try
+          with all_p[6]:  # confirm_apply
+           with patch("screens.s02_network_config.list_interfaces",
+                      return_value=FAKE_IFACES):
+
+                app = AsimilyWizard()
+                async with app.run_test(headless=True, size=(120, 40)) as pilot:
+                    await pilot.pause(0.3)
+
+                    # s01 → s02
+                    await pilot.click("#btn_next")
+                    await pilot.pause(0.3)
+
+                    # Select an interface
+                    screen = pilot.app.screen
+                    sel = screen.query_one("#sel_iface", Select)
+                    sel.value = "eno1"
+                    assert sel.value == "eno1"
+
+                    # Enable DHCP so validation passes without filling IP fields
+                    if not screen.query_one("#chk_dhcp", Checkbox).value:
+                        await pilot.click("#chk_dhcp")
+                    await pilot.pause(0.1)
+
+                    # Apply → pushes s03 (s02 is now suspended)
+                    await pilot.click("#btn_next")
+                    await pilot.pause(0.5)
+                    assert type(pilot.app.screen).__name__ == "NetworkApplyScreen"
+
+                    # Cancel → pops s03, s02 resumes → on_screen_resume fires.
+                    # Use 'escape' (bound to action_cancel_and_back) rather than
+                    # clicking #btn_back, which sits outside the 40-row viewport.
+                    await pilot.press("escape")
+                    await pilot.pause(0.5)
+                    assert type(pilot.app.screen).__name__ == "NetworkConfigScreen"
+
+                    # The selection must be preserved after resume
+                    sel_after = pilot.app.screen.query_one("#sel_iface", Select)
+                    assert sel_after.value == "eno1", (
+                        f"Expected selection 'eno1' to be preserved after resume, "
+                        f"got {sel_after.value!r}"
+                    )
 
 
 @pytest.mark.asyncio

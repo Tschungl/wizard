@@ -64,9 +64,15 @@ class NetworkConfigScreen(Screen):
 
     def on_screen_resume(self) -> None:
         """Refresh the interface Select whenever s02 becomes active again."""
+        sel = self.query_one("#sel_iface", Select)
+        previous_value = sel.value  # capture before set_options() resets it
         ifaces = list_interfaces()
         new_options = [(i.display_str(), i.name) for i in ifaces]
-        self.query_one("#sel_iface", Select).set_options(new_options)
+        sel.set_options(new_options)
+        if previous_value is not Select.BLANK:
+            valid_values = {i.name for i in ifaces}
+            if previous_value in valid_values:
+                sel.value = previous_value
         log.info("Step 2 resume: refreshed %d interfaces in Select", len(ifaces))
 
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
