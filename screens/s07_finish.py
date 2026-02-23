@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Button, Static
+from textual.widgets import Button, Footer, Header, Static
 from textual.containers import Vertical
 from network.netplan import NetplanManager
 from logger import log
@@ -90,7 +90,7 @@ class FinishScreen(Screen):
         except OSError as e:
             log.error("Failed to write config: %s", e)
             status.update(f"[red]Failed to write config: {e}[/red]")
-            self.query_one("#btn_install").disabled = False
+            self.query_one("#btn_install", Button).disabled = False
             return
 
         # Apply NTP and proxy settings now that config is confirmed
