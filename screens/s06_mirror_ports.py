@@ -1,4 +1,5 @@
 # screens/s06_mirror_ports.py
+import asyncio
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Footer, Button, Static, SelectionList
@@ -64,17 +65,19 @@ class MirrorPortsScreen(Screen):
                 selected = []
             self.app.state.mirror_interfaces = selected
             log.info("Step 6: mirror interfaces = %s", selected)
+            asyncio.create_task(self._apply_mirror_and_advance(selected))
 
-            if selected:
-                nm = NetplanManager()
-                try:
-                    nm.write_mirror_ports(selected)
-                except OSError as e:
-                    log.warning("Failed to write mirror ports YAML: %s", e)
-                try:
-                    nm.configure_mirror_promisc(selected)
-                except Exception as e:
-                    log.warning("Failed to set promisc mode: %s", e)
-
-            from screens.s07_finish import FinishScreen
-            self.app.push_screen(FinishScreen())
+    async def _apply_mirror_and_advance(self, selected: list) -> None:
+        loop = asyncio.get_running_loop()
+        if selected:
+            nm = NetplanManager()
+            try:
+                await loop.run_in_executor(None, lambda: nm.write_mirror_ports(selected))
+            except OSError as e:
+                log.warning("Failed to write mirror ports YAML: %s", e)
+            try:
+                await loop.run_in_executor(None, lambda: nm.configure_mirror_promisc(selected))
+            except Exception as e:
+                log.warning("Failed to set promisc mode: %s", e)
+        from screens.s07_finish import FinishScreen
+        self.app.push_screen(FinishScreen())

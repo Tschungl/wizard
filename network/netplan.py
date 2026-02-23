@@ -174,7 +174,7 @@ class NetplanManager:
         if not ifaces:
             return
         ethernets = {
-            iface: {"dhcp4": False, "link": {"promiscuous": True}}
+            iface: {"dhcp4": False, "promiscuous": True}
             for iface in ifaces
         }
         config = {

@@ -133,7 +133,9 @@ async def async_iface_status(iface: str) -> tuple[str, list[str]]:
     # operstate
     operstate_path = Path(f"/sys/class/net/{iface}/operstate")
     try:
-        operstate = operstate_path.read_text().strip()
+        loop = asyncio.get_running_loop()
+        operstate = await loop.run_in_executor(None, operstate_path.read_text)
+        operstate = operstate.strip()
     except OSError:
         return "unknown", []
 

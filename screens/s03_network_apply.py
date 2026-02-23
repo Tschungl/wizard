@@ -60,28 +60,37 @@ class NetworkApplyScreen(Screen):
         status = self.query_one("#status_msg", Static)
         err = self.query_one("#err_msg", Static)
 
+        loop = asyncio.get_running_loop()
         try:
             status.update("Backing up existing configuration…")
-            nm.backup()
+            await loop.run_in_executor(None, nm.backup)
 
             status.update("Writing new Netplan configuration…")
             if state.use_dhcp:
-                nm.write_dhcp(
-                    iface=state.mgmt_interface,
-                    dns=state.dns_servers,
-                    ntp=state.ntp_servers,
+                await loop.run_in_executor(
+                    None,
+                    lambda: nm.write_dhcp(
+                        iface=state.mgmt_interface,
+                        dns=state.dns_servers,
+                        ntp=state.ntp_servers,
+                    )
                 )
             else:
-                nm.write_static(
-                    iface=state.mgmt_interface,
-                    ip_cidr=f"{state.ip_address}/{state.prefix_len}",
-                    gateway=state.gateway,
-                    dns=state.dns_servers,
-                    ntp=state.ntp_servers,
+                await loop.run_in_executor(
+                    None,
+                    lambda: nm.write_static(
+                        iface=state.mgmt_interface,
+                        ip_cidr=f"{state.ip_address}/{state.prefix_len}",
+                        gateway=state.gateway,
+                        dns=state.dns_servers,
+                        ntp=state.ntp_servers,
+                    )
                 )
 
             status.update("Applying with 'netplan try'… waiting for confirmation.")
-            self._proc = nm.apply_try(timeout=COUNTDOWN_SECONDS)
+            self._proc = await loop.run_in_executor(
+                None, lambda: nm.apply_try(timeout=COUNTDOWN_SECONDS)
+            )
             self.query_one("#btn_confirm").disabled = False
 
         except Exception as e:

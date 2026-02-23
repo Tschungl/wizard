@@ -75,8 +75,8 @@ class FinishScreen(Screen):
         state = self.app.state
 
         # Write config JSON
+        loop = asyncio.get_running_loop()
         try:
-            CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
             config_data = {
                 "mgmt_interface": state.mgmt_interface,
                 "use_dhcp": state.use_dhcp,
@@ -92,7 +92,14 @@ class FinishScreen(Screen):
                 "cloud_ip": state.cloud_ip,
                 "mirror_interfaces": state.mirror_interfaces,
             }
-            CONFIG_PATH.write_text(json.dumps(config_data, indent=2))
+            payload = json.dumps(config_data, indent=2)
+            await loop.run_in_executor(
+                None,
+                lambda: (
+                    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True),
+                    CONFIG_PATH.write_text(payload),
+                )
+            )
             log.info("Config written to %s", CONFIG_PATH)
         except OSError as e:
             log.error("Failed to write config: %s", e)
@@ -104,14 +111,17 @@ class FinishScreen(Screen):
         nm = NetplanManager()
         if state.ntp_servers:
             try:
-                nm.apply_ntp(state.ntp_servers)
+                await loop.run_in_executor(None, lambda: nm.apply_ntp(state.ntp_servers))
             except OSError as e:
                 log.warning("Failed to write NTP config: %s", e)
         if state.proxy_enabled and state.proxy_host:
             try:
-                nm.apply_proxy(
-                    state.proxy_host, state.proxy_port,
-                    state.proxy_user, state.proxy_password,
+                await loop.run_in_executor(
+                    None,
+                    lambda: nm.apply_proxy(
+                        state.proxy_host, state.proxy_port,
+                        state.proxy_user, state.proxy_password,
+                    )
                 )
             except OSError as e:
                 log.warning("Failed to write proxy config: %s", e)

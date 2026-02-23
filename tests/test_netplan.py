@@ -137,7 +137,7 @@ def test_write_mirror_ports_creates_yaml(tmp_netplan, tmp_path):
     assert "eth1" in ethernets
     assert "eth2" in ethernets
     assert ethernets["eth1"]["dhcp4"] is False
-    assert ethernets["eth1"]["link"]["promiscuous"] is True
+    assert ethernets["eth1"]["promiscuous"] is True
 
 
 def test_write_mirror_ports_empty_list_no_file(tmp_netplan, tmp_path):
