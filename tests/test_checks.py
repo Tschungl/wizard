@@ -88,3 +88,24 @@ async def test_run_all_checks_calls_progress():
     assert len(results) == 1
     assert len(calls) == 1
     assert calls[0] == (1, 1)
+
+REMOVED_SOPHOS = [
+    "d1.sophosupd.com",
+    "d1.sophosxl.net",
+    "d1.sophosupd.net",
+    "mcs.sophos.com",
+]
+
+def test_removed_sophos_hosts_not_in_matrix():
+    matrix = build_check_matrix(cloud_ip=None)
+    hosts_in_matrix = {c["host"] for c in matrix}
+    for host in REMOVED_SOPHOS:
+        assert host not in hosts_in_matrix, (
+            f"{host} must be removed from the check matrix"
+        )
+
+def test_globalsign_hosts_still_present():
+    matrix = build_check_matrix(cloud_ip=None)
+    hosts = {c["host"] for c in matrix}
+    assert "ocsp2.globalsign.com" in hosts
+    assert "crl.globalsign.com" in hosts

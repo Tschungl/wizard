@@ -129,8 +129,7 @@ def build_check_matrix(cloud_ip: Optional[str]) -> List[dict]:
 
     # Sophos Antivirus – representative hostnames
     sophos_hosts = [
-        "d1.sophosupd.com", "d1.sophosupd.net", "d1.sophosxl.net",
-        "mcs.sophos.com", "ocsp2.globalsign.com", "crl.globalsign.com",
+        "ocsp2.globalsign.com", "crl.globalsign.com",
     ]
     for host in sophos_hosts:
         for port in [80, 443]:
