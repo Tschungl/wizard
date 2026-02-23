@@ -21,6 +21,7 @@ class PreflightScreen(Screen):
         super().__init__()
         self._results: list[CheckResult] = []
         self._checks_done = False
+        self._retry_shown = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -52,12 +53,13 @@ class PreflightScreen(Screen):
         label = self.query_one("#timer_label", Static)
         for elapsed in range(1, COUNTDOWN + 1):
             await asyncio.sleep(1)
-            bar.advance(1)
-            label.update(f"[bold]Elapsed:[/bold] {elapsed}s")
             if self._checks_done:
                 break
+            bar.advance(1)
+            label.update(f"[bold]Elapsed:[/bold] {elapsed}s")
 
     async def _run_checks(self) -> None:
+        self._checks_done = False
         state = self.app.state
         checks = build_check_matrix(cloud_ip=state.cloud_ip)
         spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
@@ -102,7 +104,9 @@ class PreflightScreen(Screen):
                 "[yellow]Cloud Server check failed. "
                 "Enter a new IP below or skip:[/yellow]"
             )
-            await self._show_cloud_retry()
+            if not self._retry_shown:
+                self._retry_shown = True
+                await self._show_cloud_retry()
         elif general_failed:
             err.update(
                 "[red]Some connectivity checks failed. "
@@ -142,7 +146,10 @@ class PreflightScreen(Screen):
             if new_ip:
                 self.app.state.cloud_ip = new_ip
                 log.info("Step 5: retrying with new cloud IP %s", new_ip)
-                asyncio.create_task(self._run_checks())
+            else:
+                self.app.state.cloud_ip = None
+                log.info("Step 5: empty retry IP – treating as skip")
+            asyncio.create_task(self._run_checks())
         elif event.button.id == "btn_skip_cloud":
             self.app.state.cloud_ip = None
             log.info("Step 5: Cloud IP check skipped by user")
