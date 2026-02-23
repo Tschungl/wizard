@@ -127,6 +127,8 @@ class NetworkApplyScreen(Screen):
                 f"[{color}]Interface {iface}: {operstate.upper()}  "
                 f"IP: {ip_str}[/{color}]"
             )
+            if self._confirmed or self._cancelled:
+                break
             await asyncio.sleep(2)
 
     def action_confirm_settings(self) -> None:
@@ -134,7 +136,7 @@ class NetworkApplyScreen(Screen):
             self._do_confirm()
 
     def action_cancel_and_back(self) -> None:
-        if not self._confirmed:
+        if not self._confirmed and not self._cancelled:
             asyncio.create_task(self._cancel_and_back())
 
     def _do_confirm(self) -> None:
@@ -175,4 +177,5 @@ class NetworkApplyScreen(Screen):
             if not self._confirmed and not self._cancelled and self._proc:
                 self._do_confirm()
         elif event.button.id == "btn_back":
-            asyncio.create_task(self._cancel_and_back())
+            if not self._cancelled and not self._confirmed:
+                asyncio.create_task(self._cancel_and_back())

@@ -4,6 +4,7 @@ import os
 import subprocess
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, List
 from logger import log
 
@@ -128,7 +129,6 @@ async def async_iface_status(iface: str) -> tuple[str, list[str]]:
     Returns ("unknown", []) if the interface does not exist.
     """
     import asyncio
-    from pathlib import Path
 
     # operstate
     operstate_path = Path(f"/sys/class/net/{iface}/operstate")
@@ -146,7 +146,7 @@ async def async_iface_status(iface: str) -> tuple[str, list[str]]:
         )
         stdout, _ = await proc.communicate()
     except OSError:
-        return operstate, []
+        return "unknown", []
 
     ips: list[str] = []
     for line in stdout.decode().splitlines():

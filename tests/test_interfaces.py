@@ -1,6 +1,7 @@
 # tests/test_interfaces.py
+import asyncio
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from network.interfaces import InterfaceInfo, list_interfaces, get_interface_info
 
 def test_interface_info_fields():
@@ -61,25 +62,48 @@ def test_list_interfaces_excludes_loopback():
 
 
 @pytest.mark.asyncio
-async def test_async_iface_status_returns_tuple(monkeypatch):
-    """async_iface_status returns (operstate, ips) tuple."""
+async def test_async_iface_status_parses_ip(tmp_path, monkeypatch):
+    """async_iface_status parses IP from ip-addr output."""
+    # Fake sysfs operstate
+    sysfs = tmp_path / "sys" / "class" / "net" / "eth0"
+    sysfs.mkdir(parents=True)
+    (sysfs / "operstate").write_text("up\n")
+
+    # Patch Path so operstate reads from tmp_path
     import network.interfaces as imod
-    monkeypatch.setattr(
-        imod, "async_iface_status",
-        AsyncMock(return_value=("up", ["192.168.1.10/24"]))
+    original_path_cls = imod.Path
+
+    def patched_path(p):
+        if isinstance(p, str) and p.startswith("/sys/class/net/"):
+            return tmp_path / p.lstrip("/")
+        return original_path_cls(p)
+
+    monkeypatch.setattr(imod, "Path", patched_path)
+
+    # Fake subprocess output
+    fake_proc = MagicMock()
+    fake_proc.communicate = AsyncMock(
+        return_value=(b"    inet 192.168.1.10/24 brd 192.168.1.255 scope global eth0\n", b"")
     )
-    state, ips = await imod.async_iface_status("eth0")
+    with patch("asyncio.create_subprocess_exec", return_value=fake_proc):
+        state, ips = await imod.async_iface_status("eth0")
+
     assert state == "up"
-    assert "192.168.1.10/24" in ips
+    assert any("192.168.1.10/24" in ip for ip in ips)
 
 @pytest.mark.asyncio
-async def test_async_iface_status_unknown_interface(monkeypatch):
-    """Returns ('unknown', []) for non-existent interface."""
+async def test_async_iface_status_oserror_returns_unknown(tmp_path, monkeypatch):
+    """Returns ('unknown', []) when sysfs read fails."""
     import network.interfaces as imod
-    monkeypatch.setattr(
-        imod, "async_iface_status",
-        AsyncMock(return_value=("unknown", []))
-    )
-    state, ips = await imod.async_iface_status("nonexistent99")
+    original_path_cls = imod.Path
+
+    def patched_path(p):
+        if isinstance(p, str) and p.startswith("/sys/class/net/"):
+            # Point to nonexistent path
+            return tmp_path / "nonexistent" / "operstate"
+        return original_path_cls(p)
+
+    monkeypatch.setattr(imod, "Path", patched_path)
+    state, ips = await imod.async_iface_status("no_such_iface")
     assert state == "unknown"
     assert ips == []
