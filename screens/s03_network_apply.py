@@ -27,6 +27,7 @@ class NetworkApplyScreen(Screen):
         self._proc = None
         self._confirmed = False
         self._cancelled = False
+        self._timed_out = False
 
     def compose(self) -> ComposeResult:
         yield AsimilyHeader()
@@ -112,6 +113,8 @@ class NetworkApplyScreen(Screen):
             await asyncio.sleep(1)
 
         if not self._confirmed and not self._cancelled:
+            self._timed_out = True
+            self.query_one("#btn_confirm").disabled = True
             log.info("Step 3: countdown expired – netplan will auto-rollback")
             status.update(
                 "[yellow]Timeout – rolling back to previous configuration.[/yellow]"
@@ -128,7 +131,7 @@ class NetworkApplyScreen(Screen):
         """Poll interface state every 2 s and update #iface_status."""
         iface = self.app.state.mgmt_interface
         widget = self.query_one("#iface_status", Static)
-        while not self._confirmed and not self._cancelled:
+        while not self._confirmed and not self._cancelled and not self._timed_out:
             operstate, ips = await async_iface_status(iface)
             ip_str = ", ".join(ips) if ips else "—"
             color = "green" if operstate == "up" else "yellow"
@@ -136,12 +139,12 @@ class NetworkApplyScreen(Screen):
                 f"[{color}]Interface {iface}: {operstate.upper()}  "
                 f"IP: {ip_str}[/{color}]"
             )
-            if self._confirmed or self._cancelled:
+            if self._confirmed or self._cancelled or self._timed_out:
                 break
             await asyncio.sleep(2)
 
     def action_confirm_settings(self) -> None:
-        if not self._confirmed and not self._cancelled and self._proc:
+        if not self._confirmed and not self._cancelled and not self._timed_out and self._proc:
             self._do_confirm()
 
     def action_cancel_and_back(self) -> None:
@@ -183,8 +186,10 @@ class NetworkApplyScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn_confirm":
-            if not self._confirmed and not self._cancelled and self._proc:
+            if not self._confirmed and not self._cancelled and not self._timed_out and self._proc:
                 self._do_confirm()
         elif event.button.id == "btn_back":
-            if not self._cancelled and not self._confirmed:
+            if self._timed_out:
+                self.app.pop_screen()
+            elif not self._cancelled and not self._confirmed:
                 asyncio.create_task(self._cancel_and_back())

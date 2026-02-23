@@ -136,6 +136,7 @@ class FinishScreen(Screen):
                     "bash", INSTALL_SCRIPT,
                     stdout=asyncio.subprocess.DEVNULL,
                     stderr=asyncio.subprocess.DEVNULL,
+                    start_new_session=True,
                 )
             except Exception as e:
                 log.error("Failed to launch install.sh: %s", e)
