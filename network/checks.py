@@ -127,14 +127,14 @@ def build_check_matrix(cloud_ip: Optional[str]) -> List[dict]:
             "host": host, "port": 80, "type": "tcp",
         })
 
-    # Sophos Antivirus – representative hostnames
-    sophos_hosts = [
+    # Certificate Authority (GlobalSign PKI) – OCSP and CRL endpoints
+    pki_hosts = [
         "ocsp2.globalsign.com", "crl.globalsign.com",
     ]
-    for host in sophos_hosts:
+    for host in pki_hosts:
         for port in [80, 443]:
             checks.append({
-                "label": f"Antivirus TCP {port} ({host})",
+                "label": f"PKI TCP {port} ({host})",
                 "host": host, "port": port, "type": "tcp",
             })
 
