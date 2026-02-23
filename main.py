@@ -7,6 +7,7 @@ def main():
         sys.exit(1)
     from app import AsimilyWizard
     AsimilyWizard().run()
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

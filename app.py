@@ -67,6 +67,15 @@ class AsimilyWizard(App):
     ProgressBar {
         margin: 1 0;
     }
+    #mirror_box {
+        border: solid #22c55e;
+        padding: 1 2;
+        margin-top: 1;
+    }
+    #mirror_box_title {
+        color: #22c55e;
+        text-style: bold;
+    }
     """
 
     def __init__(self) -> None:
