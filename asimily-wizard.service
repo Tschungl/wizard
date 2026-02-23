@@ -1,0 +1,20 @@
+[Unit]
+Description=Asimily First Time Setup Wizard
+After=network-pre.target
+Before=network.target
+ConditionPathExists=!/etc/asimily/wizard_config.json
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/asimily/wizard/main.py
+StandardInput=tty
+StandardOutput=tty
+StandardError=journal
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
