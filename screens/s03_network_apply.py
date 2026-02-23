@@ -193,5 +193,5 @@ class NetworkApplyScreen(Screen):
         elif event.button.id == "btn_back":
             if self._timed_out or self._confirmed:
                 self.app.pop_screen()
-            elif not self._cancelled and not self._confirmed:
+            elif not self._cancelled:
                 asyncio.create_task(self._cancel_and_back())
