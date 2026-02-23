@@ -3,9 +3,10 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import (
-    Header, Footer, Button, Static, Select,
+    Footer, Button, Static, Select,
     Input, Checkbox, Label
 )
+from widgets.asimily_header import AsimilyHeader
 from textual.containers import Vertical, Horizontal
 from network.interfaces import list_interfaces
 from validators import validate_ip, validate_prefix, validate_gateway_in_subnet, validate_dns
@@ -23,7 +24,7 @@ class NetworkConfigScreen(Screen):
         ifaces = list_interfaces()
         iface_options = [(i.display_str(), i.name) for i in ifaces]
 
-        yield Header(show_clock=True)
+        yield AsimilyHeader()
         with Vertical(id="form"):
             yield Static("Step 2: Management Port Configuration", classes="title")
             yield Label("Select Management Interface:")

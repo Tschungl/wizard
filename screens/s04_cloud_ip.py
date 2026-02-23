@@ -1,7 +1,8 @@
 # screens/s04_cloud_ip.py
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Button, Static, Input, Label
+from textual.widgets import Footer, Button, Static, Input, Label
+from widgets.asimily_header import AsimilyHeader
 from textual.containers import Vertical, Horizontal
 from validators import validate_ip
 from logger import log
@@ -11,7 +12,7 @@ class CloudIPScreen(Screen):
     """Step 4: Optional Asimily Cloud Server IP."""
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        yield AsimilyHeader()
         with Vertical(id="content"):
             yield Static("Step 4: Asimily Cloud Server IP (Optional)", classes="title")
             yield Static(

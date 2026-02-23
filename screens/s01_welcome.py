@@ -1,7 +1,8 @@
 # screens/s01_welcome.py
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Button, Static, DataTable
+from textual.widgets import Footer, Button, Static, DataTable
+from widgets.asimily_header import AsimilyHeader
 from textual.containers import Container, Vertical
 from network.interfaces import list_interfaces
 from logger import log
@@ -20,7 +21,7 @@ class WelcomeScreen(Screen):
     BINDINGS = [("n", "next_step", "Next")]
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        yield AsimilyHeader()
         with Vertical(id="content"):
             yield Static(BANNER, id="banner")
             yield Static("Detected Network Interfaces", classes="title")

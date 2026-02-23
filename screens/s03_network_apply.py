@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Button, Static, ProgressBar
+from textual.widgets import Footer, Button, Static, ProgressBar
+from widgets.asimily_header import AsimilyHeader
 from textual.containers import Container, Vertical
 from network.netplan import NetplanManager
 from logger import log
@@ -23,7 +24,7 @@ class NetworkApplyScreen(Screen):
         self._confirmed = False
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        yield AsimilyHeader()
         with Vertical(id="content"):
             yield Static("Step 3: Applying Network Configuration", classes="title")
             yield Static("Preparing…", id="status_msg")

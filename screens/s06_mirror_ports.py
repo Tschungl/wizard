@@ -1,7 +1,8 @@
 # screens/s06_mirror_ports.py
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Button, Static, SelectionList
+from textual.widgets import Footer, Button, Static, SelectionList
+from widgets.asimily_header import AsimilyHeader
 from textual.widgets.selection_list import Selection
 from textual.containers import Vertical, Horizontal
 from network.interfaces import list_interfaces
@@ -12,7 +13,7 @@ class MirrorPortsScreen(Screen):
     """Step 6: Multiselect mirror ports from remaining interfaces."""
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        yield AsimilyHeader()
         with Vertical(id="content"):
             yield Static("Step 6: Mirror Port Selection", classes="title")
             yield Static(

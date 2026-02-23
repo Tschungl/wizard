@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Static
+from textual.widgets import Button, Footer, Static
+from widgets.asimily_header import AsimilyHeader
 from textual.containers import Vertical
 from network.netplan import NetplanManager
 from logger import log
@@ -18,7 +19,7 @@ class FinishScreen(Screen):
     """Step 7: Configuration summary, config export, install.sh launcher."""
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        yield AsimilyHeader()
         with Vertical(id="content"):
             yield Static("Step 7: Configuration Complete", classes="title")
             yield Static("", id="summary")

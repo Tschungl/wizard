@@ -4,9 +4,10 @@ import asyncio
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import (
-    Header, Footer, Button, Static, ProgressBar,
+    Footer, Button, Static, ProgressBar,
     ListView, ListItem, Label, Input
 )
+from widgets.asimily_header import AsimilyHeader
 from textual.containers import Vertical, Horizontal
 from network.checks import build_check_matrix, run_all_checks, CheckResult
 from logger import log
@@ -24,7 +25,7 @@ class PreflightScreen(Screen):
         self._retry_shown = False
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        yield AsimilyHeader()
         with Vertical(id="content"):
             yield Static("Step 5: Pre-Flight Network Check", classes="title")
             yield Static(
