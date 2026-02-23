@@ -623,3 +623,80 @@ async def test_s03_back_works_after_confirm():
                     f"Expected NetworkConfigScreen after Back on confirmed s03, "
                     f"got {type(pilot.app.screen).__name__}"
                 )
+
+
+@pytest.mark.asyncio
+async def test_s07_exits_cleanly_without_install_script():
+    """
+    When install.sh does not exist, the wizard should exit cleanly
+    without raising an exception (the app.exit() path is reached).
+    """
+    from app import AsimilyWizard
+
+    all_p = _all_patches()
+    with all_p[0]:   # list_interfaces
+     with all_p[1]:  # async_iface_status
+      with all_p[2]:  # backup
+       with all_p[3]:  # write_static
+        with all_p[4]:  # write_dhcp
+         with all_p[5]:  # apply_try
+          with all_p[6]:  # confirm_apply
+           with all_p[11]:  # run_all_checks
+            with all_p[9]:   # write_mirror_ports
+             with all_p[10]:  # configure_mirror_promisc
+              with patch("screens.s07_finish.CONFIG_PATH") as mock_path, \
+                   patch("pathlib.Path.exists", return_value=False), \
+                   patch("asyncio.create_subprocess_exec", new=AsyncMock()):
+
+                    mock_path.parent = MagicMock()
+                    mock_path.parent.mkdir = MagicMock()
+                    mock_path.write_text = MagicMock()
+
+                    app = AsimilyWizard()
+                    exited = False
+                    original_exit = app.exit
+
+                    def capture_exit(*args, **kwargs):
+                        nonlocal exited
+                        exited = True
+                        original_exit(*args, **kwargs)
+
+                    app.exit = capture_exit
+
+                    async with app.run_test(headless=True, size=(120, 40)) as pilot:
+                        await pilot.pause(0.3)
+
+                        # Navigate to s07
+                        await pilot.click("#btn_next")   # s01 → s02
+                        await pilot.pause(0.3)
+                        pilot.app.screen.query_one("#sel_iface", Select).value = "eno1"
+                        if not pilot.app.screen.query_one("#chk_dhcp", Checkbox).value:
+                            await pilot.click("#chk_dhcp")
+                        await pilot.pause(0.1)
+                        await pilot.click("#btn_next")
+                        await pilot.pause(0.5)
+
+                        for _ in range(20):
+                            btn = pilot.app.screen.query_one("#btn_confirm", Button)
+                            if not btn.disabled:
+                                break
+                            await pilot.pause(0.1)
+                        await pilot.click("#btn_confirm")
+                        await pilot.pause(2.0)
+
+                        await pilot.click("#btn_skip")     # s04 skip
+                        await pilot.pause(0.3)
+                        for _ in range(30):
+                            if not pilot.app.screen.query_one("#btn_next", Button).disabled:
+                                break
+                            await pilot.pause(0.2)
+                        await pilot.click("#btn_next")     # s05 next
+                        await pilot.pause(0.5)
+                        await pilot.click("#btn_next")     # s06 finish →
+                        await pilot.pause(0.5)
+
+                        # s07: click Finish & Exit
+                        await pilot.click("#btn_finish")
+                        await pilot.pause(2.0)   # _finish_and_exit sleeps 1s
+
+                    assert exited, "app.exit() should have been called when install.sh not found"

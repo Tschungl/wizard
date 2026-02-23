@@ -74,9 +74,9 @@ class FinishScreen(Screen):
         status = self.query_one("#status_msg", Static)
         state = self.app.state
 
-        # Write config JSON
-        loop = asyncio.get_running_loop()
         try:
+            # Write config JSON
+            loop = asyncio.get_running_loop()
             config_data = {
                 "mgmt_interface": state.mgmt_interface,
                 "use_dhcp": state.use_dhcp,
@@ -93,59 +93,65 @@ class FinishScreen(Screen):
                 "mirror_interfaces": state.mirror_interfaces,
             }
             payload = json.dumps(config_data, indent=2)
-            await loop.run_in_executor(
-                None,
-                lambda: (
-                    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True),
-                    CONFIG_PATH.write_text(payload),
-                )
-            )
-            log.info("Config written to %s", CONFIG_PATH)
-        except OSError as e:
-            log.error("Failed to write config: %s", e)
-            status.update(f"[red]Failed to write config: {e}[/red]")
-            self.query_one("#btn_finish", Button).disabled = False
-            return
-
-        # Apply NTP and proxy settings
-        nm = NetplanManager()
-        if state.ntp_servers:
-            try:
-                await loop.run_in_executor(None, lambda: nm.apply_ntp(state.ntp_servers))
-            except OSError as e:
-                log.warning("Failed to write NTP config: %s", e)
-        if state.proxy_enabled and state.proxy_host:
             try:
                 await loop.run_in_executor(
                     None,
-                    lambda: nm.apply_proxy(
-                        state.proxy_host, state.proxy_port,
-                        state.proxy_user, state.proxy_password,
+                    lambda: (
+                        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True),
+                        CONFIG_PATH.write_text(payload),
                     )
                 )
+                log.info("Config written to %s", CONFIG_PATH)
             except OSError as e:
-                log.warning("Failed to write proxy config: %s", e)
+                log.error("Failed to write config: %s", e)
+                status.update(f"[red]Failed to write config: {e}[/red]")
+                self.query_one("#btn_finish", Button).disabled = False
+                return
 
-        # Fire-and-forget install.sh if present
-        install = Path(INSTALL_SCRIPT)
-        if install.exists():
-            log.info("Launching %s (fire and forget)", INSTALL_SCRIPT)
-            status.update(f"[cyan]Launching {INSTALL_SCRIPT}…[/cyan]")
-            try:
-                await asyncio.create_subprocess_exec(
-                    "bash", INSTALL_SCRIPT,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                    start_new_session=True,
+            # Apply NTP and proxy settings
+            nm = NetplanManager()
+            if state.ntp_servers:
+                try:
+                    await loop.run_in_executor(None, lambda: nm.apply_ntp(state.ntp_servers))
+                except OSError as e:
+                    log.warning("Failed to write NTP config: %s", e)
+            if state.proxy_enabled and state.proxy_host:
+                try:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: nm.apply_proxy(
+                            state.proxy_host, state.proxy_port,
+                            state.proxy_user, state.proxy_password,
+                        )
+                    )
+                except OSError as e:
+                    log.warning("Failed to write proxy config: %s", e)
+
+            # Fire-and-forget install.sh if present
+            install = Path(INSTALL_SCRIPT)
+            if install.exists():
+                log.info("Launching %s (fire and forget)", INSTALL_SCRIPT)
+                status.update(f"[cyan]Launching {INSTALL_SCRIPT}…[/cyan]")
+                try:
+                    await asyncio.create_subprocess_exec(
+                        "bash", INSTALL_SCRIPT,
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                        start_new_session=True,
+                    )
+                except Exception as e:
+                    log.error("Failed to launch install.sh: %s", e)
+            else:
+                log.info("install.sh not found at %s – skipping", INSTALL_SCRIPT)
+                status.update(
+                    "[yellow]Installation script not found. Configuration saved.[/yellow]"
                 )
-            except Exception as e:
-                log.error("Failed to launch install.sh: %s", e)
-        else:
-            log.info("install.sh not found – skipping")
-            status.update(
-                "[yellow]install.sh not found. Configuration saved.[/yellow]"
-            )
 
-        await asyncio.sleep(1)
-        log.info("Wizard complete – exiting")
-        self.app.exit()
+            await asyncio.sleep(1)
+            log.info("Wizard complete – exiting")
+            self.app.exit()
+
+        except Exception as e:
+            log.error("Unexpected error in _finish_and_exit: %s", e)
+            status.update(f"[red]Unexpected error: {e}[/red]")
+            self.query_one("#btn_finish", Button).disabled = False
