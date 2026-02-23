@@ -432,8 +432,7 @@ async def test_s02_proxy_label_mentions_https():
             await pilot.pause(0.3)
 
             chk = pilot.app.screen.query_one("#chk_proxy", Checkbox)
-            # Textual stores checkbox label in _label attribute
-            label_text = str(chk._label).lower()
+            label_text = str(chk.label).lower()
             assert "https" in label_text, (
                 "Proxy checkbox must mention HTTPS"
             )
